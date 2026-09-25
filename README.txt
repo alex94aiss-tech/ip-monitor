@@ -101,10 +101,28 @@ IP Monitor — надсилання публічного IP + SSH-статус �
 Вимкнення:
 - sudo systemctl disable --now ip-monitor.timer
 - sudo systemctl disable ip-monitor-boot.service
-- sudo rm /opt/ip-monitor/send_ip.py /etc/ip-monitor/env \
+- sudo systemctl disable ip-monitor-telegram.service
+- sudo rm /opt/ip-monitor/send_ip.py /opt/ip-monitor/telegram_bot.py \
+          /etc/ip-monitor/env \
           /etc/systemd/system/ip-monitor.service \
           /etc/systemd/system/ip-monitor.timer \
-          /etc/systemd/system/ip-monitor-boot.service
+          /etc/systemd/system/ip-monitor-boot.service \
+          /etc/systemd/system/ip-monitor-telegram.service
+
+Telegram-керування:
+Бот працює як systemd-сервіс ip-monitor-telegram.service.
+Для управління з Telegram потрібно:
+1. Додати бота @stasys_1994 як адміністратора в чат 850506439
+2. Запустити сервіс: sudo systemctl start ip-monitor-telegram.service
+
+Команди бота:
+  /status  — поточний IP + SSH-статус
+  /ip      — тільки поточний IP
+  /update  — оновити IP Monitor з GitHub
+  /restart — перезапустити сервіси
+  /help    — список команд
+
+Логи бота: journalctl -u ip-monitor-telegram -f
 
 Репозиторій:
   https://github.com/alex94aiss-tech/ip-monitor

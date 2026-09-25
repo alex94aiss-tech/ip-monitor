@@ -68,6 +68,9 @@ fi
 # Boot-сервіс завжди перезапускаємо
 sudo systemctl restart ip-monitor-boot.service 2>/dev/null || true
 
+# Telegram-бот перезапускаємо
+sudo systemctl restart ip-monitor-telegram.service 2>/dev/null || true
+
 # 6. Тест
 echo ""
 echo "Готово. Тестовий запуск..."
