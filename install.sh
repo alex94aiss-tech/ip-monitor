@@ -1,15 +1,20 @@
 #!/bin/bash
-# IP Monitor — встановлення через GitHub Gist
-# Одна команда: curl -sL <цей-URL> | sudo bash
+# IP Monitor — встановлення та оновлення
+# Usage:
+#   install.sh              — повна установка (питає про інтервал)
+#   install.sh --update     — оновити файли без запитань
+#   install.sh --extract-only <dir> — створити файли в директорії
 set -e
 
-echo "=== Встановлення IP Monitor ==="
+INSTALL_DIR="/opt/ip-monitor"
+ENV_FILE="/etc/ip-monitor/env"
+GIST_RAW="https://gist.githubusercontent.com/alex94aiss-tech/fb33fd645163ebc469869b6584a85263/raw/715c3d554da42f8103fb0c47579ede4a1c4735fb/install.sh"
 
-# 1. Створити директорії
-sudo mkdir -p /opt/ip-monitor /var/lib/ip-monitor /etc/ip-monitor
-
-# 2. Файл конфігурації
-sudo tee /etc/ip-monitor/env > /dev/null << 'ENVEOF'
+# ===== Функція створення файлів =====
+create_files() {
+    local target="$1"
+    mkdir -p "$target"
+    cat > "$target/env" << 'ENVEOF'
 IP_MONITOR_BOT_TOKEN=8905507918:AAFQixlsGfHIW06lPvBEoeVAFeaUus3tbUc
 IP_MONITOR_CHAT_ID=850506439
 IP_MONITOR_SYSTEM_NAME=ЛСДС_5
@@ -17,10 +22,8 @@ IP_MONITOR_SSH_PORT=22
 IP_MONITOR_SSH_TIMEOUT=5
 IP_MONITOR_CHECK_INTERVAL=5
 ENVEOF
-sudo chmod 600 /etc/ip-monitor/env
 
-# 3. Скрипт моніторингу (IP + SSH + Telegram)
-sudo tee /opt/ip-monitor/send_ip.py > /dev/null << 'PYEOF'
+    cat > "$target/send_ip.py" << 'PYEOF'
 #!/usr/bin/env python3
 import os, sys, json, urllib.request, urllib.parse, socket, datetime
 
@@ -115,14 +118,14 @@ def main():
     ip_line = f"IP: <b><code>{ip}</code></b>" + (f" (<i>новий</i>)" if ip_changed else "") + "\n"
     ssh_line = f"SSH ({SSH_PORT}): "
     if ssh["status"] == "up":
-        ssh_line += f"\U0001F7E2 <b>доступний</b> \u2014 {ssh['info']}"
+        ssh_line += f"\U0001F7E2 <b>доступний</b> — {ssh['info']}"
     elif ssh["status"] == "timeout":
-        ssh_line += f"\U0001F7E1 <b>таймаут</b> \u2014 {ssh['info']}"
+        ssh_line += f"\U0001F7E1 <b>таймаут</b> — {ssh['info']}"
     elif ssh["status"] == "refused":
-        ssh_line += f"\U0001F7E2 <b>відмовлено</b> \u2014 {ssh['info']}"
+        ssh_line += f"\U0001F7E2 <b>відмовлено</b> — {ssh['info']}"
     else:
-        ssh_line += f"\u274c <b>не визначено</b> \u2014 {ssh['info']}"
-    old_ip_line = f"Попередній IP: <code>{last_ip or '\u2014'}</code>\n" if last_ip else ""
+        ssh_line += f"\u274c <b>не визначено</b> — {ssh['info']}"
+    old_ip_line = f"Попередній IP: <code>{last_ip or '—'}</code>\n" if last_ip else ""
     msg = (f"\U0001F541 <b>{SYSTEM_NAME}</b>\n\n"
            f"{ip_line}"
            f"{old_ip_line}"
@@ -138,10 +141,7 @@ if __name__ == "__main__":
     main()
 PYEOF
 
-sudo chmod 755 /opt/ip-monitor/send_ip.py
-
-# 4. systemd-сервіс
-sudo tee /etc/systemd/system/ip-monitor.service > /dev/null << 'EOF'
+    cat > "$target/ip-monitor.service" << 'EOF'
 [Unit]
 Description=IP Monitor — надсилання змін IP + SSH-статус в Telegram
 After=network-online.target
@@ -159,8 +159,7 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-# 5. systemd-таймер (періодичний)
-sudo tee /etc/systemd/system/ip-monitor.timer > /dev/null << 'EOF'
+    cat > "$target/ip-monitor.timer" << 'EOF'
 [Unit]
 Description=Запускати IP Monitor періодично
 
@@ -173,8 +172,7 @@ AccuracySec=1min
 WantedBy=timers.target
 EOF
 
-# 6. systemd-сервіс при старті
-sudo tee /etc/systemd/system/ip-monitor-boot.service > /dev/null << 'EOF'
+    cat > "$target/ip-monitor-boot.service" << 'EOF'
 [Unit]
 Description=IP Monitor — повідомлення при старті системи
 After=network-online.target
@@ -191,9 +189,30 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 EOF
+}
 
-# 7. Активувати
-sudo systemctl daemon-reload
+# ===== Аргументи =====
+if [ "$1" = "--extract-only" ] && [ -n "$2" ]; then
+    echo "Extracting files to $2..."
+    create_files "$2"
+    echo "Done."
+    exit 0
+fi
+
+if [ "$1" = "--update" ]; then
+    echo "Updating installed files..."
+    create_files "/opt/ip-monitor"
+    sudo chmod 755 /opt/ip-monitor/send_ip.py
+    sudo chmod 600 /etc/ip-monitor/env 2>/dev/null || true
+    sudo systemctl daemon-reload
+    if systemctl is-enabled ip-monitor.timer &>/dev/null && [ "$(systemctl is-active ip-monitor.timer 2>/dev/null)" = "active" ]; then
+        sudo systemctl restart ip-monitor.timer
+        echo "Timer restarted."
+    fi
+    sudo systemctl restart ip-monitor-boot.service 2>/dev/null || true
+    echo "Update completed."
+    exit 0
+fi
 
 # Запитання: як часто надсилати
 echo ""
