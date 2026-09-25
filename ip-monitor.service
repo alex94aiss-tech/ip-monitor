@@ -1,0 +1,15 @@
+[Unit]
+Description=IP Monitor — надсилання змін IP в Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/ip-monitor/env
+ExecStart=/usr/bin/python3 /opt/ip-monitor/send_ip.py
+WorkingDirectory=/opt/ip-monitor
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
