@@ -112,7 +112,7 @@ IP Monitor — надсилання публічного IP + SSH-статус �
 Telegram-керування:
 Бот працює як systemd-сервіс ip-monitor-telegram.service.
 Для управління з Telegram потрібно:
-1. Додати бота @stasys_1994 як адміністратора в чат 850506439
+1. Додати бота @IPckrcpo202bot як адміністратора в чат 850506439
 2. Запустити сервіс: sudo systemctl start ip-monitor-telegram.service
 
 Команди бота:
