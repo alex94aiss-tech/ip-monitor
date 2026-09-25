@@ -34,6 +34,8 @@ IP Monitor — надсилання публічного IP + SSH-статус �
   Якщо обрано 2 — додатково налаштовується таймер на зазначений інтервал (за замовчуванням 5 хв,
   змінюється в env через IP_MONITOR_CHECK_INTERVAL).
 
+Встановлення (через USB):
+
 Варіант 2 — з USB:
   1. Скопіювати цю папку на флешку
   2. На Ubuntu вставити флешку
@@ -70,6 +72,31 @@ IP Monitor — надсилання публічного IP + SSH-статус �
   IP_MONITOR_SYSTEM_NAME=<назва системи, наприклад ЛСДС_5>
   IP_MONITOR_SSH_PORT=22              # порт SSH
   IP_MONITOR_SSH_TIMEOUT=5            # таймаут перевірки SSH в секундах
+  IP_MONITOR_CHECK_INTERVAL=5         # інтервал перевірки в хвилинах (таймер)
+
+Оновлення:
+
+Встановлена версія оновлюється з GitHub. Є три способи:
+
+Варіант 1 — однією командою (рекомендовано):
+  curl -sL https://raw.githubusercontent.com/alex94aiss-tech/ip-monitor/main/update.sh | sudo bash
+
+Варіант 2 — через git (якщо система встановлена через git clone):
+  cd /opt/ip-monitor
+  git pull origin main
+  sudo systemctl daemon-reload
+  sudo systemctl restart ip-monitor.timer 2>/dev/null || true
+  sudo systemctl restart ip-monitor-boot.service
+
+Варіант 3 — через install.sh з аргументом --update:
+  curl -sL https://gist.githubusercontent.com/alex94aiss-tech/fb33fd645163ebc469869b6584a85263/raw/715c3d554da42f8103fb0c47579ede4a1c4735fb/install.sh | sudo bash -- --update
+
+Що робить update.sh:
+- робить резервну копію /etc/ip-monitor/env (щоб не втратити токен і налаштування)
+- оновлює файли: send_ip.py, ip-monitor.service, ip-monitor.timer, ip-monitor-boot.service
+- не чіпає env (конфігурацію)
+- перезапускає systemd
+- робить тестовий запуск
 
 Вимкнення:
 - sudo systemctl disable --now ip-monitor.timer
